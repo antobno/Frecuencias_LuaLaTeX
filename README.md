@@ -16,4 +16,4 @@ El PDF generado contiene:
 
 ## Vista previa
 
-[![Vista previa](Frecuencia.jpeg)](Frecuencias.pdf)
+[![Vista previa](Frecuencias.jpeg)](Frecuencias.pdf)
