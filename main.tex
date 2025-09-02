@@ -1,0 +1,409 @@
+\documentclass[10pt]{article}
+\usepackage{fontspec}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{filecontents}
+\usepackage{pdflscape}
+\usepackage[x11names]{xcolor}
+
+% Colores
+\definecolor{cw0}{RGB}{0,175,239}
+\definecolor{cw1}{RGB}{216,244,254}
+\definecolor{cw2}{RGB}{177,234,254}
+\definecolor{cw3}{RGB}{242,251,255}
+\definecolor{cw4}{RGB}{197,199,208}
+\definecolor{cw5}{RGB}{204,245,252}
+
+\usepackage[
+    left=0.75cm,
+    right=0.75cm,
+    top=1.75cm,
+    bottom=1.75cm,
+    %showframe
+]{geometry}
+\usepackage{makecell}
+\usepackage{nicematrix}
+
+\usepackage[spanish]{babel}
+\decimalpoint
+\usepackage{pgfplots}
+\usepackage{pgfplotstable}
+\usepackage{pgf-pie}
+\pgfplotsset{compat=1.18}
+\usepgfplotslibrary{statistics}
+
+\begin{filecontents*}{datos.csv}
+Juego,DR,DB
+1,3,2
+2,4,1
+3,5,1
+4,5,3
+5,4,2
+6,2,2
+7,4,3
+8,2,5
+9,2,4
+10,3,1
+11,4,3
+12,3,6
+13,3,2
+14,1,4
+15,1,1
+16,5,5
+17,1,5
+18,1,3
+19,1,1
+20,1,3
+21,6,4
+22,5,1
+23,6,3
+24,1,2
+25,2,2
+26,1,2
+27,5,4
+28,3,2
+29,5,4
+30,6,2
+31,1,2
+32,4,2
+33,1,5
+34,1,5
+35,6,3
+36,6,4
+37,3,2
+38,1,4
+39,4,2
+40,5,5
+41,4,5
+42,6,2
+43,5,5
+44,2,2
+45,4,6
+46,5,6
+47,1,5
+48,1,5
+49,3,5
+50,1,6
+\end{filecontents*}
+
+% Crear archivos separados para DR y DB
+\begin{filecontents*}{dr_data.csv}
+valor
+3
+4
+5
+5
+4
+2
+4
+2
+2
+3
+4
+3
+3
+1
+1
+5
+1
+1
+1
+1
+6
+5
+6
+1
+2
+1
+5
+3
+5
+6
+1
+4
+1
+1
+6
+6
+3
+1
+4
+5
+4
+6
+5
+2
+4
+5
+1
+1
+3
+1
+\end{filecontents*}
+
+\begin{filecontents*}{db_data.csv}
+valor
+2
+1
+1
+3
+2
+2
+3
+5
+4
+1
+3
+6
+2
+4
+1
+5
+5
+3
+1
+3
+4
+1
+3
+2
+2
+2
+4
+2
+4
+2
+2
+2
+5
+5
+3
+4
+2
+4
+2
+5
+5
+2
+5
+2
+6
+6
+5
+5
+5
+6
+\end{filecontents*}
+
+\usepackage{luacode}
+
+\begin{luacode*}
+function procesar_datos()
+    -- Leer el archivo CSV
+    local file = io.open("datos.csv", "r")
+    if not file then
+        tex.print("Error: No se pudo abrir el archivo datos.csv")
+        return
+    end
+    
+    -- Saltar la primera línea (encabezados)
+    file:read()
+    
+    -- Inicializar tablas de frecuencias
+    local dr_freq = {0, 0, 0, 0, 0, 0}  -- valores 1-6
+    local db_freq = {0, 0, 0, 0, 0, 0}  -- valores 1-6
+    
+    -- Procesar cada línea
+    for line in file:lines() do
+        local juego, dr, db = line:match("(%d+),(%d+),(%d+)")
+        if dr and db then
+            dr = tonumber(dr)
+            db = tonumber(db)
+            
+            -- Contar frecuencias para DR (1-6)
+            if dr >= 1 and dr <= 6 then
+                dr_freq[dr] = dr_freq[dr] + 1
+            end
+            
+            -- Contar frecuencias para DB (1-6)
+            if db >= 1 and db <= 6 then
+                db_freq[db] = db_freq[db] + 1
+            end
+        end
+    end
+    
+    file:close()
+    
+    -- Calcular estadísticas para DR
+    local dr_total = 0
+    for i=1,6 do dr_total = dr_total + dr_freq[i] end
+    
+    local dr_acum = 0
+
+    tex.print("\\noindent\\begin{minipage}[c]{17.5cm}")
+    tex.print("\\begin{NiceTabular}[hvlines,cell-space-limits=6pt,rules={color=cw4,width=1pt}]{ccccccc}")
+    tex.print("\\CodeBefore")
+    tex.print("\\rowcolor{cw0}{1}")
+    tex.print("\\rowcolors{2}{white}{cw2}")
+    tex.print("\\Body")
+    tex.print("\\RowStyle[color=white]{\\bfseries}")
+    tex.print("\\makecell{Resultado del \\\\ dado rojo} & Frecuencia & \\makecell{Frecuencia \\\\ relativa} & \\makecell{Frecuencia \\\\ porcentual} & \\makecell{Frecuencia \\\\ acumulada} & \\makecell{Frecuencia \\\\ acumulada \\\\ relativa} & \\makecell{Frecuencia \\\\ acumulada \\\\ porcentual} \\\\")
+    
+    for i=1,6 do
+        dr_acum = dr_acum + dr_freq[i]
+        local freq_rel = dr_freq[i] / dr_total
+        local freq_porc = freq_rel * 100
+        local acum_rel = dr_acum / dr_total
+        local acum_porc = acum_rel * 100
+        
+        tex.print(i .. " & " .. dr_freq[i] .. " & " .. 
+                  string.format("%.3f", freq_rel) .. " & " .. 
+                  string.format("%.1f\\%%", freq_porc) .. " & " .. 
+                  dr_acum .. " & " .. 
+                  string.format("%.3f", acum_rel) .. " & " .. 
+                  string.format("%.1f\\%%", acum_porc) .. " \\\\")
+    end
+    
+    tex.print("\\end{NiceTabular}\\\\")
+    -- tex.print("\\captionof{table}{Tabla de frecuencias del dado rojo}")
+    tex.print("\\end{minipage}")
+    
+    -- Generar datos para gráfica de pastel del DR
+    tex.print("\\begin{minipage}[r]{8.3cm}")
+    tex.print("\\begin{tikzpicture}")
+    tex.print("\\pie[text=inside,color={cw0,cw1,cw2,cw3,cw4,cw5},explode={0.2,0,0,0,0,0}]{")
+    for i=1,6 do
+        local freq_porc = (dr_freq[i] / dr_total) * 100
+        if i < 6 then
+            tex.print(string.format("%.1f/%d,", freq_porc, i))
+        else
+            tex.print(string.format("%.1f/%d", freq_porc, i))
+        end
+    end
+    tex.print("}")
+    tex.print("\\end{tikzpicture}")
+    tex.print("\\end{minipage}")
+
+    tex.print("\\\\")
+    
+    -- Calcular estadísticas para DB
+    local db_total = 0
+    for i=1,6 do db_total = db_total + db_freq[i] end
+    
+    local db_acum = 0
+    
+    tex.print("\\noindent\\begin{minipage}[c]{17.5cm}")
+    tex.print("\\begin{NiceTabular}[hvlines,cell-space-limits=6pt,rules={color=cw4,width=1pt}]{ccccccc}")
+    tex.print("\\CodeBefore")
+    tex.print("\\rowcolor{cw0}{1}")
+    tex.print("\\rowcolors{2}{white}{cw2}")
+    tex.print("\\Body")
+    tex.print("\\RowStyle[color=white]{\\bfseries}")
+    tex.print("\\makecell{Resultado del \\\\ dado blanco} & Frecuencia & \\makecell{Frecuencia \\\\ relativa} & \\makecell{Frecuencia \\\\ porcentual} & \\makecell{Frecuencia \\\\ acumulada} & \\makecell{Frecuencia \\\\ acumulada \\\\ relativa} & \\makecell{Frecuencia \\\\ acumulada \\\\ porcentual} \\\\")
+    
+    for i=1,6 do
+        db_acum = db_acum + db_freq[i]
+        local freq_rel = db_freq[i] / db_total
+        local freq_porc = freq_rel * 100
+        local acum_rel = db_acum / db_total
+        local acum_porc = acum_rel * 100
+        
+        tex.print(i .. " & " .. db_freq[i] .. " & " .. 
+                  string.format("%.3f", freq_rel) .. " & " .. 
+                  string.format("%.1f\\%%", freq_porc) .. " & " .. 
+                  db_acum .. " & " .. 
+                  string.format("%.3f", acum_rel) .. " & " .. 
+                  string.format("%.1f\\%%", acum_porc) .. " \\\\")
+    end
+    
+    tex.print("\\end{NiceTabular}")
+    -- tex.print("\\captionof{table}{Tabla de frecuencias del dado blanco}")
+    tex.print("\\end{minipage}")
+    
+    -- Generar datos para gráfica de pastel del DB
+    tex.print("\\begin{minipage}[r]{8.3cm}")
+    tex.print("\\begin{tikzpicture}")
+    tex.print("\\pie[text=inside,color={cw0,cw1,cw2,cw3,cw4,cw5},explode={0,0.2,0,0,0,0}]{")
+    for i=1,6 do
+        local freq_porc = (db_freq[i] / db_total) * 100
+        if i < 6 then
+            tex.print(string.format("%.1f/%d,", freq_porc, i))
+        else
+            tex.print(string.format("%.1f/%d", freq_porc, i))
+        end
+    end
+    tex.print("}")
+    tex.print("\\end{tikzpicture}")
+    tex.print("\\end{minipage}")
+end
+\end{luacode*}
+
+\begin{document}
+\pagestyle{empty}
+
+\begin{landscape}
+
+\directlua{procesar_datos()}
+
+\noindent\begin{minipage}[c]{12.15cm}
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    ybar,
+    ymin=0,
+    %
+    xtick=data,
+    xlabel={Resultado del dado rojo},
+    xtick style={draw=none},
+    xticklabels={1, 2, 3, 4, 5, 6},
+    xticklabel style={yshift=1mm, xshift=7mm},
+    %
+    ylabel={Frecuencia},
+    width=1.04\textwidth,
+    height=0.6\textwidth
+]
+\addplot +[
+    hist={
+        bins=6,
+        data min=1,
+        data max=6
+    },
+    fill=cw2,
+    draw=cw3
+] table [y index=0] {dr_data.csv};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\,
+\begin{minipage}[c]{12.15cm}
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    ybar,
+    ymin=0,
+    %
+    xtick=data,
+    xlabel={Resultado del dado blanco},
+    xtick style={draw=none},
+    xticklabels={1, 2, 3, 4, 5, 6},
+    xticklabel style={yshift=1mm, xshift=7mm},
+    %
+    ylabel={Frecuencia},
+    width=1.04\textwidth,
+    height=0.6\textwidth
+]
+\addplot +[
+    hist={
+        bins=6,
+        data min=1,
+        data max=6
+    },
+    fill=cw0,
+    draw=cw1
+] table [y index=0] {db_data.csv};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+
+\end{landscape}
+
+\end{document}
